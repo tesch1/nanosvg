@@ -580,7 +580,7 @@ static void nsvg__curveBounds(float* bounds, float* curve)
 	bounds[2] = nsvg__maxf(v0[0], v3[0]);
 	bounds[3] = nsvg__maxf(v0[1], v3[1]);
 
-	// Bezier curve fits inside the convex hull of it's control points.
+	// Bezier curve fits inside the convex hull of its control points.
 	// If control points are inside the bounds, we're done.
 	if (nsvg__ptInBounds(v1, bounds) && nsvg__ptInBounds(v2, bounds))
 		return;
