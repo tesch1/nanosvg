@@ -39,19 +39,6 @@ typedef void (*StartElementCallback)(void* ud, const char* el, const char** attr
 typedef void (*EndElementCallback)(void* ud, const char* el);
 typedef void (*ContentCallback)(void* ud, const char* el);
 
-struct hash_cstr {
-	// a simple, fast FNV-1a hash for C-style strings
-	inline size_t operator()(const char *s) const {
-		uint64_t h = 0xcbf29ce484222325;
-		int c;
-		while ((c = *s++) != '\0') {
-			h ^= c;
-			h *= 0x100000001b3;
-		}
-		return h;
-	}
-};
-
 struct equal_cstr {
 	inline bool operator()(const char *a, const char *b) const {
 		return strcmp(a, b) == 0;
@@ -68,13 +55,13 @@ class NanoSVGVisitor : public tinyxml2::XMLVisitor
 	StartElementCallback mStartElement;
 	EndElementCallback mEndElement;
 	ContentCallback mContent;
-	const XMLAttribute *mUseAttributes;
+	int mDepth = 0;
 
 	void *mUserData;
 	const XMLDocument *mCurrentDocument;
 	bool mSkipDefs;
 
-	typedef std::map<const char*, const XMLElement*, equal_cstr> ElementsMap;
+	typedef std::map<std::string, const XMLElement *> ElementsMap;
 	std::unique_ptr<ElementsMap> mElementsById;
 
 	void gatherIds(const XMLElement *parent) {
@@ -84,6 +71,7 @@ class NanoSVGVisitor : public tinyxml2::XMLVisitor
 
 			const char *id = child->Attribute("id");
 			if (id) {
+				std::cerr << "adding ref '" << id << "'\n";
 				mElementsById->insert(ElementsMap::value_type(id, child));
 			}
 			child = child->NextSiblingElement();
@@ -113,7 +101,6 @@ public:
 		: mStartElement(startElement),
 		  mEndElement(endElement),
 		  mContent(content),
-		  mUseAttributes(nullptr),
 		  mUserData(userdata),
 		  mCurrentDocument(nullptr),
 		  mSkipDefs(false)
@@ -126,7 +113,7 @@ public:
 	}
 
 	virtual bool VisitEnter(const XMLDocument &doc) {
-		std::cerr << "VisitEnter doc'" /*<< doc.Value() << */"'\n";
+		std::cerr << std::string(mDepth++, ' ') << "VisitEnter doc'" /*<< doc.Value() << */"'\n";
 		mCurrentDocument = doc.ToDocument();
 
 		// always handle <defs> tags first
@@ -142,18 +129,33 @@ public:
 	}
 
 	virtual bool VisitExit(const XMLDocument &doc) {
-		std::cerr << "VisitExit'" << doc.Value() << "'\n";
+		std::cerr << std::string(mDepth--, ' ') << "VisitExit'" << doc.Value() << "'\n";
 		mCurrentDocument = nullptr;
 		return true;
 	}
 
 	virtual bool VisitEnter(const XMLElement &element, const XMLAttribute *firstAttribute) {
-		std::cerr << "VisitExit2'" << element.Value() << "'\n";
+		std::cerr << std::string(mDepth++, ' ') << "VisitEnter2'" << element.Value() << "'\n";
 		if (mSkipDefs && strcmp(element.Name(), "defs") == 0 &&
 			element.Parent() == mCurrentDocument->RootElement()) {
 			// already handled in l VisitEnter(const XMLDocument &doc)
 			return true;
 		}
+		const char *attr[NSVG_XML_MAX_ATTRIBS];
+		int numAttr = 0;
+
+		const XMLAttribute *attribute = firstAttribute;
+		while (attribute && numAttr < NSVG_XML_MAX_ATTRIBS - 3) {
+			attr[numAttr++] = attribute->Name();
+			attr[numAttr++] = attribute->Value();
+			attribute = attribute->Next();
+		}
+
+		attr[numAttr++] = 0;
+		attr[numAttr++] = 0;	
+
+		mStartElement(mUserData, element.Name(), attr);
+
 		if (strcmp(element.Name(), "use") == 0) {
 			const char *href = element.Attribute("href");
 			if (!href)
@@ -168,9 +170,7 @@ public:
 					const XMLElement *referee = lookupById(s + 1);
 					if (referee) {
 						std::cerr << "Using '" << (s+1) << "'\n";
-						mUseAttributes = firstAttribute;
 						referee->Accept(this);
-						mUseAttributes = nullptr;
 					}
 					else
 						std::cerr << "unable to find reference '" << (s+1) << "'\n";
@@ -178,33 +178,13 @@ public:
 			}
 			else
 				std::cerr << "use missing href '" << element.Value() << "'\n";
-		} else {
-			const char *attr[NSVG_XML_MAX_ATTRIBS];
-			int numAttr = 0;
-
-			const XMLAttribute *attribute = firstAttribute;
-			while (attribute && numAttr < NSVG_XML_MAX_ATTRIBS - 3) {
-				attr[numAttr++] = attribute->Name();
-				attr[numAttr++] = attribute->Value();
-				attribute = attribute->Next();
-			}
-			while (mUseAttributes && numAttr < NSVG_XML_MAX_ATTRIBS - 3) {
-				attr[numAttr++] = mUseAttributes->Name();
-				attr[numAttr++] = mUseAttributes->Value();
-				mUseAttributes = mUseAttributes->Next();
-			}
-
-			attr[numAttr++] = 0;
-			attr[numAttr++] = 0;	
-
-			mStartElement(mUserData, element.Name(), attr);
 		}
 
 		return true;
 	}
 
 	virtual bool VisitExit(const XMLElement& element) {
-		std::cerr << "VisitExit2'" << element.Value() << "'\n";
+		std::cerr << std::string(mDepth--, ' ') << "VisitExit2'" << element.Value() << "'\n";
 		mEndElement(mUserData, element.Name());
 		return true;
 	}
