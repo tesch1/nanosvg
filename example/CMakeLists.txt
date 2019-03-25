@@ -4,6 +4,8 @@ option (BUILD_FUZZ "Build binaries with tooling for fuzzing." OFF)
 include_directories(${CMAKE_SOURCE_DIR}/src)
 include_directories(${CMAKE_SOURCE_DIR}/example)
 
+include (ExternalProject)
+
 find_package(PkgConfig REQUIRED)
 pkg_search_module(GLFW REQUIRED glfw3)
 include_directories(${GLFW_INCLUDE_DIRS})
@@ -11,17 +13,17 @@ add_compile_options(-O2 -Wall)
 
 add_executable(dump dump.c)
 add_executable(example1 example1.c)
-add_executable(example2 example2.c)
+#add_executable(example2 example2.c)
+add_executable(example2 example2.c bridge_poke.cpp)
 
 target_link_libraries(dump m )
 target_link_libraries(example1 m GL ${GLFW_STATIC_LIBRARIES})
-target_link_libraries(example2 m GL ${GLFW_STATIC_LIBRARIES})
+target_link_libraries(example2 m GL ${GLFW_STATIC_LIBRARIES} tinyxml2)
 
 #
 # if fuzzing is enabled
 #
 if (BUILD_FUZZ)
-  include (ExternalProject)
   #
   # Afl
   #
@@ -53,3 +55,29 @@ if (BUILD_FUZZ)
   add_dependencies (fuzz example1)
 
 endif (BUILD_FUZZ)
+
+#
+# tinyxml2
+#
+ExternalProject_Add (tinyxml2X
+  PREFIX tinyxml2X
+  URL https://github.com/leethomason/tinyxml2/archive/7.0.1.tar.gz
+  URL_HASH MD5=bc3c806033a2cb426db0fdb75e5b1bf2
+  UPDATE_COMMAND ""
+  PATCH_COMMAND ""
+  CONFIGURE_COMMAND ""
+  BUILD_COMMAND ""
+  INSTALL_COMMAND ""
+  LOG_DOWNLOAD ON
+  )
+ExternalProject_Get_Property (tinyxml2X source_dir)
+set (TINYXML2_DIR "${source_dir}")
+add_library (tinyxml2 ${TINYXML2_DIR}/tinyxml2.cpp)
+#add_library (tinyxml2 ${TINYXML2_DIR}/tinyxml2.cpp ${TINYXML2_DIR}/tinyxml2.h)
+
+enable_language (CXX)
+set (CMAKE_CXX_STANDARD 11)
+
+include_directories ("${TINYXML2_DIR}")
+add_executable (ext_viewer ext_viewer.cpp bridge_poke.cpp ${TINYXML2_DIR}/tinyxml2.cpp)
+target_link_libraries(ext_viewer m GL ${GLFW_STATIC_LIBRARIES})

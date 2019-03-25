@@ -2685,7 +2685,7 @@ static void nsvg__startElement(void* ud, const char* el, const char** attr)
 		return;
 	}
 
-	if (strcmp(el, "g") == 0) {
+	if (strcmp(el, "g") == 0 || strcmp(el, "use") == 0) {
 		nsvg__pushAttr(p);
 		nsvg__parseAttribs(p, attr);
 	} else if (strcmp(el, "path") == 0) {
@@ -2735,7 +2735,7 @@ static void nsvg__endElement(void* ud, const char* el)
 {
 	NSVGparser* p = (NSVGparser*)ud;
 
-	if (strcmp(el, "g") == 0) {
+	if (strcmp(el, "g") == 0 || strcmp(el, "use") == 0) {
 		nsvg__popAttr(p);
 	} else if (strcmp(el, "path") == 0) {
 		p->pathFlag = 0;
@@ -2911,6 +2911,7 @@ NSVGimage* nsvgParse(char* input, const char* units, float dpi)
 	return nsvgParseEx(input, units, dpi, nsvg__parseXML);
 }
 
+#ifndef NANOSVG_NO_PARSE_FROM_FILE
 NSVGimage* nsvgParseFromFile(const char* filename, const char* units, float dpi)
 {
 	FILE* fp = NULL;
@@ -2939,6 +2940,7 @@ error:
 	if (image) nsvgDelete(image);
 	return NULL;
 }
+#endif
 
 NSVGpath* nsvgDuplicatePath(NSVGpath* p)
 {

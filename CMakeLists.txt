@@ -3,6 +3,8 @@ cmake_minimum_required(VERSION 3.0)
 project(nanosvg LANGUAGES C VERSION "0.0.0")
 
 set(NANOSVG_HEADERS "src/nanosvg.h" "src/nanosvgrast.h")
+set (CMAKE_BUILD_TYPE "Debug" CACHE STRING "Set build type")
+set_property (CACHE CMAKE_BUILD_TYPE PROPERTY STRINGS "Debug" "Release" "RelWithDebInfo") # "MinSizeRel"
 
 add_library(nanosvg INTERFACE)
 
