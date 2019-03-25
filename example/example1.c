@@ -1,3 +1,4 @@
+// -*-  Mode: C++; c-basic-offset: 4; tab-width: 4; indent-tabs-mode: t -*-
 //
 // Copyright (c) 2013 Mikko Mononen memon@inside.org
 //
@@ -28,6 +29,8 @@
 NSVGimage* g_image = NULL;
 
 static unsigned char bgColor[4] = {205,202,200,255};
+static unsigned char ptsColor[4] = {200,160,0,255};
+static unsigned char selectColor[4] = {200,0,0,255};
 static unsigned char lineColor[4] = {0,160,192,255};
 
 static float distPtSeg(float x, float y, float px, float py, float qx, float qy)
@@ -94,12 +97,22 @@ void drawPath(float* pts, int npts, char closed, float tol)
 	glEnd();
 }
 
-void drawControlPts(float* pts, int npts)
+void x_at(float xpos, float ypos, float tol)
+{
+	glBegin(GL_LINES);
+	glVertex2f(xpos-tol,ypos-tol);
+	glVertex2f(xpos+tol,ypos+tol);
+	glVertex2f(xpos-tol,ypos+tol);
+	glVertex2f(xpos+tol,ypos-tol);
+	glEnd();
+}
+
+void drawControlPts(float* pts, int npts, float tol, float xcur, float ycur)
 {
 	int i;
 
 	// Control lines
-	glColor4ubv(lineColor);
+	glColor4ubv(ptsColor);
 	glBegin(GL_LINES);
 	for (i = 0; i < npts-1; i += 3) {
 		float* p = &pts[i*2];
@@ -112,7 +125,7 @@ void drawControlPts(float* pts, int npts)
 
 	// Points
 	glPointSize(6.0f);
-	glColor4ubv(lineColor);
+	glColor4ubv(ptsColor);
 
 	glBegin(GL_POINTS);
 	glVertex2f(pts[0],pts[1]);
@@ -122,17 +135,39 @@ void drawControlPts(float* pts, int npts)
 	}
 	glEnd();
 
+	// Cursor-near Point(s)
+	glPointSize(8.0f);
+	glColor4ubv(selectColor);
+
+	glBegin(GL_POINTS);
+	for (i = 0; i < npts-1; i += 3) {
+		float* p = &pts[i*2];
+		if (sqrt(pow(p[6]-xcur,2) + pow(p[7]-ycur,2)) < tol)
+			glVertex2f(p[6],p[7]); // central point
+	}
+	glEnd();
+
+	// Very first path point
+	glColor4ubv(ptsColor);
+	x_at(pts[0], pts[1], tol);
+
 	// Points
 	glPointSize(3.0f);
 
 	glBegin(GL_POINTS);
 	glColor4ubv(bgColor);
 	glVertex2f(pts[0],pts[1]);
+
 	for (i = 0; i < npts-1; i += 3) {
 		float* p = &pts[i*2];
-		glColor4ubv(lineColor);
+		glColor4ubv(ptsColor);
 		glVertex2f(p[2],p[3]);
 		glVertex2f(p[4],p[5]);
+		glColor4ubv(selectColor);
+		if (sqrt(pow(p[2] - xcur,2) + pow(p[3] - ycur,2)) < tol)
+			glVertex2f(p[2],p[3]);
+		if (sqrt(pow(p[4] - xcur,2) + pow(p[5] - ycur,2)) < tol)
+			glVertex2f(p[4],p[5]);
 		glColor4ubv(bgColor);
 		glVertex2f(p[6],p[7]);
 	}
@@ -179,7 +214,6 @@ void drawframe(GLFWwindow* window)
 	}
 	// Size of one pixel.
 	px = (view[2] - view[1]) / (float)width;
-
 	glOrtho(view[0], view[2], view[3], view[1], -1, 1);
 
 	glMatrixMode(GL_MODELVIEW);
@@ -198,10 +232,20 @@ void drawframe(GLFWwindow* window)
 	glVertex2f(0, g_image->height);
 	glEnd();
 
+	// Draw cursor
+	double xpos, ypos;
+	float tol = 8.f * px;
+	glfwGetCursorPos(window, &xpos, &ypos);
+	glColor4ubv(ptsColor);
+	xpos = (xpos / width) * (view[2] - view[0]) + view[0];
+	ypos = (ypos / height) * (view[3] - view[1]) + view[1];
+	x_at(xpos, ypos, tol);
+
+	// Draw control points and resulting paths
 	for (shape = g_image->shapes; shape != NULL; shape = shape->next) {
 		for (path = shape->paths; path != NULL; path = path->next) {
 			drawPath(path->pts, path->npts, path->closed, px * 1.5f);
-			drawControlPts(path->pts, path->npts);
+			drawControlPts(path->pts, path->npts, tol, xpos, ypos);
 		}
 	}
 
@@ -214,6 +258,12 @@ void resizecb(GLFWwindow* window, int width, int height)
 	NSVG_NOTUSED(width);
 	NSVG_NOTUSED(height);
 	drawframe(window);
+}
+
+void key_callback(GLFWwindow* window, int key, int scancode, int action, int mods)
+{
+	if (key == GLFW_KEY_Q && action == GLFW_PRESS)
+		glfwSetWindowShouldClose(window, GLFW_TRUE);
 }
 
 int main(int argc, char *argv[])
@@ -233,11 +283,11 @@ int main(int argc, char *argv[])
 		return -1;
 	}
 
+	glfwSetKeyCallback(window, key_callback);
 	glfwSetFramebufferSizeCallback(window, resizecb);
 	glfwMakeContextCurrent(window);
 	glEnable(GL_POINT_SMOOTH);
 	glEnable(GL_LINE_SMOOTH);
-
 
 	const char* filename = "../example/nano.svg";
 	if (argc > 1)
