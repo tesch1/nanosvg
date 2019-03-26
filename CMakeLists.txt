@@ -1,10 +1,11 @@
 cmake_minimum_required(VERSION 3.0)
 
-project(nanosvg LANGUAGES C VERSION "0.0.0")
+project(nanosvg LANGUAGES C CXX VERSION "0.0.0")
+set(CMAKE_CXX_STANDARD 11)
 
 set(NANOSVG_HEADERS "src/nanosvg.h" "src/nanosvgrast.h")
-set (CMAKE_BUILD_TYPE "Debug" CACHE STRING "Set build type")
-set_property (CACHE CMAKE_BUILD_TYPE PROPERTY STRINGS "Debug" "Release" "RelWithDebInfo") # "MinSizeRel"
+set(CMAKE_BUILD_TYPE "Debug" CACHE STRING "Set build type")
+set_property(CACHE CMAKE_BUILD_TYPE PROPERTY STRINGS "Debug" "Release" "RelWithDebInfo") # "MinSizeRel"
 
 add_library(nanosvg INTERFACE)
 
@@ -13,6 +14,41 @@ target_include_directories(
     INTERFACE
     "$<BUILD_INTERFACE:${CMAKE_CURRENT_LIST_DIR}>"
 )
+
+#
+# Add thirdparty dependencies
+#
+file (MAKE_DIRECTORY "${CMAKE_BINARY_DIR}/thirdparty")
+
+# Generator name
+if (NOT "${CMAKE_EXTRA_GENERATOR}" STREQUAL "")
+  set (GENERATOR_STRING "${CMAKE_EXTRA_GENERATOR} - ${CMAKE_GENERATOR}")
+else ()
+  set (GENERATOR_STRING "${CMAKE_GENERATOR}")
+endif ()
+
+# Configure the thirdparty build directory
+execute_process (
+  WORKING_DIRECTORY "${CMAKE_BINARY_DIR}/thirdparty"
+  COMMAND ${CMAKE_COMMAND} -G${GENERATOR_STRING} -DANDROID=${ANDROID} -DCMAKE_CONFIGURATION_TYPES=${CMAKE_CONFIGURATION_TYPES} -DCMAKE_BUILD_TYPE=${CMAKE_BUILD_TYPE} -DCMAKE_MAKE_PROGRAM=${CMAKE_MAKE_PROGRAM} ${CMAKE_SOURCE_DIR}/thirdparty
+  RESULT_VARIABLE THIRDPARTY_CONFIG_RESULT
+)
+if (THIRDPARTY_CONFIG_RESULT)
+  message (FATAL_ERROR "Configuring dependencies failed: ${THIRDPARTY_CONFIG_RESULT}")
+endif ()
+
+# Build the thirdparty directory
+execute_process (
+  WORKING_DIRECTORY "${CMAKE_BINARY_DIR}/thirdparty"
+  COMMAND "${CMAKE_COMMAND}" --build .
+  RESULT_VARIABLE THIRDPARTY_BUILD_RESULT
+  )
+if (THIRDPARTY_BUILD_RESULT)
+  message (FATAL_ERROR "Building dependencies failed: ${THIRDPARTY_BUILD_RESULT}")
+endif ()
+
+# Include the now-built thirdparty dependencies
+add_subdirectory(thirdparty)
 
 # Build examples
 add_subdirectory(example)

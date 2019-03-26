@@ -4,8 +4,6 @@ option (BUILD_FUZZ "Build binaries with tooling for fuzzing." OFF)
 include_directories(${CMAKE_SOURCE_DIR}/src)
 include_directories(${CMAKE_SOURCE_DIR}/example)
 
-include (ExternalProject)
-
 find_package(PkgConfig REQUIRED)
 pkg_search_module(GLFW REQUIRED glfw3)
 include_directories(${GLFW_INCLUDE_DIRS})
@@ -24,20 +22,6 @@ target_link_libraries(example2 m GL ${GLFW_STATIC_LIBRARIES} tinyxml2)
 # if fuzzing is enabled
 #
 if (BUILD_FUZZ)
-  #
-  # Afl
-  #
-  ExternalProject_Add (aflX
-    PREFIX aflX
-    URL http://lcamtuf.coredump.cx/afl/releases/afl-2.52b.tgz
-    CONFIGURE_COMMAND ""
-    BUILD_COMMAND "make"
-    BUILD_IN_SOURCE 1
-    INSTALL_COMMAND ""
-    LOG_DOWNLOAD ON
-    )
-  ExternalProject_Get_Property (aflX source_dir)
-  set (AFL_DIR "${source_dir}")
   message ("American Fuzzy Lop in ${AFL_DIR}")
   #set (CMAKE_C_COMPILER ${AFL_DIR}/afl-gcc)
   #set (CMAKE_CXX_COMPILER ${AFL_DIR}/afl-g++)
@@ -56,28 +40,6 @@ if (BUILD_FUZZ)
 
 endif (BUILD_FUZZ)
 
-#
-# tinyxml2
-#
-ExternalProject_Add (tinyxml2X
-  PREFIX tinyxml2X
-  URL https://github.com/leethomason/tinyxml2/archive/7.0.1.tar.gz
-  URL_HASH MD5=bc3c806033a2cb426db0fdb75e5b1bf2
-  UPDATE_COMMAND ""
-  PATCH_COMMAND ""
-  CONFIGURE_COMMAND ""
-  BUILD_COMMAND ""
-  INSTALL_COMMAND ""
-  LOG_DOWNLOAD ON
-  )
-ExternalProject_Get_Property (tinyxml2X source_dir)
-set (TINYXML2_DIR "${source_dir}")
-add_library (tinyxml2 ${TINYXML2_DIR}/tinyxml2.cpp)
-#add_library (tinyxml2 ${TINYXML2_DIR}/tinyxml2.cpp ${TINYXML2_DIR}/tinyxml2.h)
-
-enable_language (CXX)
-set (CMAKE_CXX_STANDARD 11)
-
-include_directories ("${TINYXML2_DIR}")
-add_executable (ext_viewer ext_viewer.cpp bridge_poke.cpp ${TINYXML2_DIR}/tinyxml2.cpp)
+include_directories("${TINYXML2_DIR}")
+add_executable(ext_viewer ext_viewer.cpp bridge_poke.cpp ${TINYXML2_DIR}/tinyxml2.cpp)
 target_link_libraries(ext_viewer m GL ${GLFW_STATIC_LIBRARIES})
