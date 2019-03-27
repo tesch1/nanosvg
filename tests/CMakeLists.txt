@@ -1,5 +1,4 @@
 
-enable_testing ()
 include_directories(${CMAKE_SOURCE_DIR}/src)
 include_directories(${CMAKE_SOURCE_DIR}/example)
 
@@ -9,16 +8,16 @@ include_directories(${CMAKE_SOURCE_DIR}/example)
 #
 
 # download reference svg files
-execute_process (
-  COMMAND curl https://codeload.github.com/web-platform-tests/wpt/tar.gz/master | tar -xz --strip=1 wpt-master/svg
-  RESULT_VARIABLE DL_SVG_RESULT
-  )
+#execute_process (
+#  COMMAND curl https://codeload.github.com/web-platform-tests/wpt/tar.gz/master | tar -xz --strip=1 wpt-master/svg
+#  RESULT_VARIABLE DL_SVG_RESULT
+#  )
 #add_custom_target (
 #  OUTPUT svg
 #  COMMAND curl https://codeload.github.com/web-platform-tests/wpt/tar.gz/master | tar -xz --strip=1 wpt-master/svg
 #  )
 
-add_test (reftests ./reftests.sh)
+add_test (reftests ${CMAKE_CURRENT_SOURCE_DIR}/reftests.sh)
 
 # cmake 3.10 adds support for "GoogleTest" which enumerates the tests
 # inside of the code and adds them to ctest.

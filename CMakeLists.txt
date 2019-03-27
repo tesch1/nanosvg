@@ -7,6 +7,8 @@ set(NANOSVG_HEADERS "src/nanosvg.h" "src/nanosvgrast.h")
 set(CMAKE_BUILD_TYPE "Debug" CACHE STRING "Set build type")
 set_property(CACHE CMAKE_BUILD_TYPE PROPERTY STRINGS "Debug" "Release" "RelWithDebInfo") # "MinSizeRel"
 
+enable_testing ()
+
 add_library(nanosvg INTERFACE)
 
 target_include_directories(
