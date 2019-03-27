@@ -52,6 +52,7 @@ extern "C" {
 //
 // If you don't know or care about the units stuff, "px" and 96 should get you going.
 
+#define NANOSVG_DEBUG
 
 /* Example Usage:
 	// Load SVG
@@ -197,6 +198,7 @@ void nsvgDelete(NSVGimage* image);
 #include <string.h>
 #include <stdlib.h>
 #include <math.h>
+#include <assert.h>
 
 #define NSVG_PI (3.14159265358979323846264338327f)
 #define NSVG_KAPPA90 (0.5522847493f)	// Length proportional to radius of a cubic bezier handle for 90deg arcs.
@@ -761,12 +763,16 @@ static void nsvg__pushAttr(NSVGparser* p)
 		p->attrHead++;
 		memcpy(&p->attr[p->attrHead], &p->attr[p->attrHead-1], sizeof(NSVGattrib));
 	}
+	else
+		assert(0);
 }
 
 static void nsvg__popAttr(NSVGparser* p)
 {
 	if (p->attrHead > 0)
 		p->attrHead--;
+	else
+		assert(0);
 }
 
 static float nsvg__actualOrigX(NSVGparser* p)
@@ -1043,8 +1049,12 @@ static void nsvg__addPath(NSVGparser* p, char closed)
 	float* curve;
 	int i;
 
-	if (p->npts < 4)
+	if (p->npts < 4) {
+#ifdef NANOSVG_DEBUG
+		printf("NSVG: tried to add path with insufficient npts=%d\n", p->npts);
+#endif
 		return;
+	}
 
 	if (closed)
 		nsvg__lineTo(p, p->pts[0], p->pts[1]);
@@ -1227,6 +1237,11 @@ static unsigned int nsvg__parseColorHex(const char* str)
 		c = (c&0xf) | ((c&0xf0) << 4) | ((c&0xf00) << 8);
 		c |= c<<4;
 	}
+#ifdef NANOSVG_DEBUG
+	else {
+		printf("NSVG: invalid hex string: '%s'\n", str);
+	}
+#endif
 	r = (c >> 16) & 0xff;
 	g = (c >> 8) & 0xff;
 	b = c & 0xff;
@@ -1413,6 +1428,11 @@ static unsigned int nsvg__parseColorName(const char* str)
 			return nsvg__colors[i].color;
 		}
 	}
+#ifdef NANOSVG_DEBUG
+	{
+		printf("NSVG: invalid color name: '%s'\n", str);
+	}
+#endif
 
 	return NSVG_RGB(128, 128, 128);
 }
@@ -1433,7 +1453,12 @@ static float nsvg__parseOpacity(const char* str)
 {
 	float val = nsvg__atof(str);
 	if (val < 0.0f) val = 0.0f;
-	if (val > 1.0f) val = 1.0f;
+	else if (val > 1.0f) val = 1.0f;
+#ifdef NANOSVG_DEBUG
+	else {
+		printf("NSVG: invalid opacity: '%s'\n", str);
+	}
+#endif
 	return val;
 }
 
@@ -1464,6 +1489,11 @@ static int nsvg__parseUnits(const char* units)
 		return NSVG_UNITS_EM;
 	else if (units[0] == 'e' && units[1] == 'x')
 		return NSVG_UNITS_EX;
+#ifdef NANOSVG_DEBUG
+	else if (units[0]) {
+		printf("NSVG: unrecognized units: '%s'\n", units);
+	}
+#endif
 	return NSVG_UNITS_USER;
 }
 
@@ -1513,6 +1543,7 @@ static int nsvg__parseTransformArgs(const char* str, float* args, int maxNa, int
 			++ptr;
 		}
 	}
+	++end;
 	return (int)(end - str);
 }
 
@@ -1522,7 +1553,12 @@ static int nsvg__parseMatrix(float* xform, const char* str)
 	float t[6];
 	int na = 0;
 	int len = nsvg__parseTransformArgs(str, t, 6, &na);
-	if (na != 6) return len;
+	if (na != 6) {
+#ifdef NANOSVG_DEBUG
+		printf("NSVG: invalid matrix: '%s'\n", str);
+#endif
+		return len;
+	}
 	memcpy(xform, t, sizeof(float)*6);
 	return len;
 }
@@ -1533,8 +1569,10 @@ static int nsvg__parseTranslate(float* xform, const char* str)
 	float t[6];
 	int na = 0;
 	int len = nsvg__parseTransformArgs(str, args, 2, &na);
+#ifdef NANOSVG_DEBUG
+	if (na == 0) printf("NSVG: invalid translation: '%s'\n", str);
+#endif
 	if (na == 1) args[1] = 0.0;
-
 	nsvg__xformSetTranslation(t, args[0], args[1]);
 	memcpy(xform, t, sizeof(float)*6);
 	return len;
@@ -1546,6 +1584,9 @@ static int nsvg__parseScale(float* xform, const char* str)
 	int na = 0;
 	float t[6];
 	int len = nsvg__parseTransformArgs(str, args, 2, &na);
+#ifdef NANOSVG_DEBUG
+	if (na == 0) printf("NSVG: invalid scale: '%s'\n", str);
+#endif
 	if (na == 1) args[1] = args[0];
 	nsvg__xformSetScale(t, args[0], args[1]);
 	memcpy(xform, t, sizeof(float)*6);
@@ -1558,8 +1599,13 @@ static int nsvg__parseSkewX(float* xform, const char* str)
 	int na = 0;
 	float t[6];
 	int len = nsvg__parseTransformArgs(str, args, 1, &na);
-	nsvg__xformSetSkewX(t, args[0]/180.0f*NSVG_PI);
-	memcpy(xform, t, sizeof(float)*6);
+	if (na == 1) {
+		nsvg__xformSetSkewX(t, args[0]/180.0f*NSVG_PI);
+		memcpy(xform, t, sizeof(float)*6);
+	}
+#ifdef NANOSVG_DEBUG
+	else printf("NSVG: invalid skewX: '%s'\n", str);
+#endif
 	return len;
 }
 
@@ -1569,8 +1615,13 @@ static int nsvg__parseSkewY(float* xform, const char* str)
 	int na = 0;
 	float t[6];
 	int len = nsvg__parseTransformArgs(str, args, 1, &na);
-	nsvg__xformSetSkewY(t, args[0]/180.0f*NSVG_PI);
-	memcpy(xform, t, sizeof(float)*6);
+	if (na == 1) {
+		nsvg__xformSetSkewY(t, args[0]/180.0f*NSVG_PI);
+		memcpy(xform, t, sizeof(float)*6);
+	}
+#ifdef NANOSVG_DEBUG
+	else printf("NSVG: invalid skewY: '%s'\n", str);
+#endif
 	return len;
 }
 
@@ -1581,6 +1632,9 @@ static int nsvg__parseRotate(float* xform, const char* str)
 	float m[6];
 	float t[6];
 	int len = nsvg__parseTransformArgs(str, args, 3, &na);
+#ifdef NANOSVG_DEBUG
+	if (na == 0) printf("NSVG: invalid rotation: '%s'\n", str);
+#endif
 	if (na == 1)
 		args[1] = args[2] = 0.0f;
 	nsvg__xformIdentity(m);
@@ -1621,7 +1675,11 @@ static void nsvg__parseTransform(float* xform, const char* str)
 			str += nsvg__parseSkewX(t, str);
 		else if (strncmp(str, "skewY", 5) == 0)
 			str += nsvg__parseSkewY(t, str);
-		else{
+		else {
+#ifdef NANOSVG_DEBUG
+			if (!nsvg__isspace(*str))
+				printf("NSVG: transform junk: '%s'\n", str);
+#endif
 			++str;
 			continue;
 		}
@@ -1651,6 +1709,10 @@ static char nsvg__parseLineCap(const char* str)
 		return NSVG_CAP_ROUND;
 	else if (strcmp(str, "square") == 0)
 		return NSVG_CAP_SQUARE;
+#ifdef NANOSVG_DEBUG
+	else if (*str)
+		printf("NSVG: unhandled linecap: '%s'\n", str);
+#endif
 	// TODO: handle inherit.
 	return NSVG_CAP_BUTT;
 }
@@ -1663,6 +1725,10 @@ static char nsvg__parseLineJoin(const char* str)
 		return NSVG_JOIN_ROUND;
 	else if (strcmp(str, "bevel") == 0)
 		return NSVG_JOIN_BEVEL;
+#ifdef NANOSVG_DEBUG
+	else if (*str)
+		printf("NSVG: unhandled linejoin: '%s'\n", str);
+#endif
 	// TODO: handle inherit.
 	return NSVG_JOIN_MITER;
 }
@@ -1673,6 +1739,10 @@ static char nsvg__parseFillRule(const char* str)
 		return NSVG_FILLRULE_NONZERO;
 	else if (strcmp(str, "evenodd") == 0)
 		return NSVG_FILLRULE_EVENODD;
+#ifdef NANOSVG_DEBUG
+	else if (*str)
+		printf("NSVG: unhandled fill-rule: '%s'\n", str);
+#endif
 	// TODO: handle inherit.
 	return NSVG_FILLRULE_NONZERO;
 }
@@ -1788,7 +1858,16 @@ static int nsvg__parseAttr(NSVGparser* p, const char* name, const char* value)
 	} else if (strcmp(name, "id") == 0) {
 		strncpy(attr->id, value, 63);
 		attr->id[63] = '\0';
+	} else if (strcmp(name, "x") == 0) {
+		nsvg__xformSetTranslation(xform, (float)nsvg__atof(value), 0);
+		nsvg__xformPremultiply(attr->xform, xform);
+	} else if (strcmp(name, "y") == 0) {
+		nsvg__xformSetTranslation(xform, 0, (float)nsvg__atof(value));
+		nsvg__xformPremultiply(attr->xform, xform);
 	} else {
+#ifdef NANOSVG_DEBUG
+		//printf("NSVG: unrecognized attr: '%s' = '%s'\n", name, value);
+#endif
 		return 0;
 	}
 	return 1;
@@ -1842,7 +1921,11 @@ static void nsvg__parseStyle(NSVGparser* p, const char* str)
 		while (end > start &&  (*end == ';' || nsvg__isspace(*end))) --end;
 		++end;
 
-		nsvg__parseNameValue(p, start, end);
+		if (!nsvg__parseNameValue(p, start, end)) {
+#ifdef NANOSVG_DEBUG
+			printf("NSVG: unrecognized style: '%s'\n", str);
+#endif
+		}
 		if (*str) ++str;
 	}
 }
@@ -1855,7 +1938,12 @@ static void nsvg__parseAttribs(NSVGparser* p, const char** attr)
 		if (strcmp(attr[i], "style") == 0)
 			nsvg__parseStyle(p, attr[i + 1]);
 		else
-			nsvg__parseAttr(p, attr[i], attr[i + 1]);
+			if (!nsvg__parseAttr(p, attr[i], attr[i + 1])) {
+#ifdef NANOSVG_DEBUG
+				printf("NSVG: unrecognized attrib: '%s'='%s'\n", attr[i], attr[i + 1]);
+#endif
+			}
+
 	}
 }
 
@@ -2334,11 +2422,14 @@ static void nsvg__parseRect(NSVGparser* p, const char** attr)
 	for (i = 0; attr[i]; i += 2) {
 		if (!nsvg__parseAttr(p, attr[i], attr[i + 1])) {
 			if (strcmp(attr[i], "x") == 0) x = nsvg__parseCoordinate(p, attr[i+1], nsvg__actualOrigX(p), nsvg__actualWidth(p));
-			if (strcmp(attr[i], "y") == 0) y = nsvg__parseCoordinate(p, attr[i+1], nsvg__actualOrigY(p), nsvg__actualHeight(p));
-			if (strcmp(attr[i], "width") == 0) w = nsvg__parseCoordinate(p, attr[i+1], 0.0f, nsvg__actualWidth(p));
-			if (strcmp(attr[i], "height") == 0) h = nsvg__parseCoordinate(p, attr[i+1], 0.0f, nsvg__actualHeight(p));
-			if (strcmp(attr[i], "rx") == 0) rx = fabsf(nsvg__parseCoordinate(p, attr[i+1], 0.0f, nsvg__actualWidth(p)));
-			if (strcmp(attr[i], "ry") == 0) ry = fabsf(nsvg__parseCoordinate(p, attr[i+1], 0.0f, nsvg__actualHeight(p)));
+			else if (strcmp(attr[i], "y") == 0) y = nsvg__parseCoordinate(p, attr[i+1], nsvg__actualOrigY(p), nsvg__actualHeight(p));
+			else if (strcmp(attr[i], "width") == 0) w = nsvg__parseCoordinate(p, attr[i+1], 0.0f, nsvg__actualWidth(p));
+			else if (strcmp(attr[i], "height") == 0) h = nsvg__parseCoordinate(p, attr[i+1], 0.0f, nsvg__actualHeight(p));
+			else if (strcmp(attr[i], "rx") == 0) rx = fabsf(nsvg__parseCoordinate(p, attr[i+1], 0.0f, nsvg__actualWidth(p)));
+			else if (strcmp(attr[i], "ry") == 0) ry = fabsf(nsvg__parseCoordinate(p, attr[i+1], 0.0f, nsvg__actualHeight(p)));
+#ifdef NANOSVG_DEBUG
+			else printf("NSVG: unrecognized rect attr: '%s'='%s'\n", attr[i], attr[i + 1]);
+#endif
 		}
 	}
 
@@ -2386,8 +2477,11 @@ static void nsvg__parseCircle(NSVGparser* p, const char** attr)
 	for (i = 0; attr[i]; i += 2) {
 		if (!nsvg__parseAttr(p, attr[i], attr[i + 1])) {
 			if (strcmp(attr[i], "cx") == 0) cx = nsvg__parseCoordinate(p, attr[i+1], nsvg__actualOrigX(p), nsvg__actualWidth(p));
-			if (strcmp(attr[i], "cy") == 0) cy = nsvg__parseCoordinate(p, attr[i+1], nsvg__actualOrigY(p), nsvg__actualHeight(p));
-			if (strcmp(attr[i], "r") == 0) r = fabsf(nsvg__parseCoordinate(p, attr[i+1], 0.0f, nsvg__actualLength(p)));
+			else if (strcmp(attr[i], "cy") == 0) cy = nsvg__parseCoordinate(p, attr[i+1], nsvg__actualOrigY(p), nsvg__actualHeight(p));
+			else if (strcmp(attr[i], "r") == 0) r = fabsf(nsvg__parseCoordinate(p, attr[i+1], 0.0f, nsvg__actualLength(p)));
+#ifdef NANOSVG_DEBUG
+			else printf("NSVG: unrecognized circle attr: '%s'='%s'\n", attr[i], attr[i + 1]);
+#endif
 		}
 	}
 
@@ -2417,9 +2511,12 @@ static void nsvg__parseEllipse(NSVGparser* p, const char** attr)
 	for (i = 0; attr[i]; i += 2) {
 		if (!nsvg__parseAttr(p, attr[i], attr[i + 1])) {
 			if (strcmp(attr[i], "cx") == 0) cx = nsvg__parseCoordinate(p, attr[i+1], nsvg__actualOrigX(p), nsvg__actualWidth(p));
-			if (strcmp(attr[i], "cy") == 0) cy = nsvg__parseCoordinate(p, attr[i+1], nsvg__actualOrigY(p), nsvg__actualHeight(p));
-			if (strcmp(attr[i], "rx") == 0) rx = fabsf(nsvg__parseCoordinate(p, attr[i+1], 0.0f, nsvg__actualWidth(p)));
-			if (strcmp(attr[i], "ry") == 0) ry = fabsf(nsvg__parseCoordinate(p, attr[i+1], 0.0f, nsvg__actualHeight(p)));
+			else if (strcmp(attr[i], "cy") == 0) cy = nsvg__parseCoordinate(p, attr[i+1], nsvg__actualOrigY(p), nsvg__actualHeight(p));
+			else if (strcmp(attr[i], "rx") == 0) rx = fabsf(nsvg__parseCoordinate(p, attr[i+1], 0.0f, nsvg__actualWidth(p)));
+			else if (strcmp(attr[i], "ry") == 0) ry = fabsf(nsvg__parseCoordinate(p, attr[i+1], 0.0f, nsvg__actualHeight(p)));
+#ifdef NANOSVG_DEBUG
+			else printf("NSVG: unrecognized ellipse attr: '%s'='%s'\n", attr[i], attr[i + 1]);
+#endif
 		}
 	}
 
@@ -2450,9 +2547,12 @@ static void nsvg__parseLine(NSVGparser* p, const char** attr)
 	for (i = 0; attr[i]; i += 2) {
 		if (!nsvg__parseAttr(p, attr[i], attr[i + 1])) {
 			if (strcmp(attr[i], "x1") == 0) x1 = nsvg__parseCoordinate(p, attr[i + 1], nsvg__actualOrigX(p), nsvg__actualWidth(p));
-			if (strcmp(attr[i], "y1") == 0) y1 = nsvg__parseCoordinate(p, attr[i + 1], nsvg__actualOrigY(p), nsvg__actualHeight(p));
-			if (strcmp(attr[i], "x2") == 0) x2 = nsvg__parseCoordinate(p, attr[i + 1], nsvg__actualOrigX(p), nsvg__actualWidth(p));
-			if (strcmp(attr[i], "y2") == 0) y2 = nsvg__parseCoordinate(p, attr[i + 1], nsvg__actualOrigY(p), nsvg__actualHeight(p));
+			else if (strcmp(attr[i], "y1") == 0) y1 = nsvg__parseCoordinate(p, attr[i + 1], nsvg__actualOrigY(p), nsvg__actualHeight(p));
+			else if (strcmp(attr[i], "x2") == 0) x2 = nsvg__parseCoordinate(p, attr[i + 1], nsvg__actualOrigX(p), nsvg__actualWidth(p));
+			else if (strcmp(attr[i], "y2") == 0) y2 = nsvg__parseCoordinate(p, attr[i + 1], nsvg__actualOrigY(p), nsvg__actualHeight(p));
+#ifdef NANOSVG_DEBUG
+			else printf("NSVG: unrecognized line attr: '%s'='%s'\n", attr[i], attr[i + 1]);
+#endif
 		}
 	}
 
@@ -2553,6 +2653,9 @@ static void nsvg__parseSVG(NSVGparser* p, const char** attr)
 						p->alignType = NSVG_ALIGN_SLICE;
 				}
 			}
+#ifdef NANOSVG_DEBUG
+			else printf("NSVG: unrecognized svg attr: '%s'='%s'\n", attr[i], attr[i + 1]);
+#endif
 		}
 	}
 }
@@ -2620,6 +2723,10 @@ static void nsvg__parseGradient(NSVGparser* p, const char** attr, char type)
 				strncpy(grad->ref, href+1, 62);
 				grad->ref[62] = '\0';
 			}
+#ifdef NANOSVG_DEBUG
+			else printf("NSVG: unrecognized gradient attr: '%s'='%s'\n", attr[i], attr[i + 1]);
+#endif
+
 		}
 	}
 
@@ -2736,7 +2843,8 @@ static void nsvg__endElement(void* ud, const char* el)
 	NSVGparser* p = (NSVGparser*)ud;
 
 	if (strcmp(el, "g") == 0 || strcmp(el, "use") == 0) {
-		nsvg__popAttr(p);
+		if (!p->defsFlag)
+			nsvg__popAttr(p);
 	} else if (strcmp(el, "path") == 0) {
 		p->pathFlag = 0;
 	} else if (strcmp(el, "defs") == 0) {

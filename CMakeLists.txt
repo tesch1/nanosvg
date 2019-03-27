@@ -47,11 +47,16 @@ if (THIRDPARTY_BUILD_RESULT)
   message (FATAL_ERROR "Building dependencies failed: ${THIRDPARTY_BUILD_RESULT}")
 endif ()
 
+add_compile_options(-fno-omit-frame-pointer)
+add_compile_options(-Wall)
+set (CMAKE_CXX_FLAGS_DEBUG "${CMAKE_CXX_FLAGS_DEBUG} -D_GLIBCXX_DEBUG -g -O0 ${SANITIZER}")
+
 # Include the now-built thirdparty dependencies
 add_subdirectory(thirdparty)
 
 # Build examples
 add_subdirectory(example)
+add_subdirectory(tests)
 
 # Introduce variables:
 # * CMAKE_INSTALL_INCLUDEDIR

@@ -1,5 +1,7 @@
 
 enable_testing ()
+include_directories(${CMAKE_SOURCE_DIR}/src)
+include_directories(${CMAKE_SOURCE_DIR}/example)
 
 #
 # Basic parse/render tests:
@@ -29,16 +31,18 @@ else (CMAKE_VERSION VERSION_LESS 3.10)
   # Configure google-test as a downloadable library.
   include (GoogleTest)
 
-  foreach (TEST test1)
+  foreach (TEST_FILE svg2x.c)
+    string (REGEX REPLACE "\\.[^.]*$" "" TEST ${TEST_FILE})
     # test binaries
-    add_executable (${TEST} ${TEST}.cpp)
+    add_executable (${TEST} ${TEST_FILE})
     target_link_libraries (${TEST} ${GTEST_LIBRARY})
+    target_link_libraries (${TEST} m GL extxml)
     # discover individual tests
     gtest_discover_tests (${TEST} TEST_LIST ${TEST}_targets
       PROPERTIES TIMEOUT 2
       ENVIRONMENT "CMAKE_SOURCE_DIR=${CMAKE_SOURCE_DIR}"
       )
-  endforeach (TEST)
+  endforeach (TEST_FILE)
 
 endif (CMAKE_VERSION VERSION_LESS 3.10)
 

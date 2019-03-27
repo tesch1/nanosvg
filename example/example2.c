@@ -67,7 +67,12 @@ int main(int argc, char *argv[])
 
 	if (out_filename[0]) {
 		printf("writing %s\n", out_filename);
-		stbi_write_png(out_filename, w, h, 4, img, w*4);
+		if (strstr(out_filename, ".png"))
+			stbi_write_png(out_filename, w, h, 4, img, w*4);
+		else if (strstr(out_filename, ".bmp"))
+			stbi_write_bmp(out_filename, w, h, 4, img);
+		else
+			printf("Unrecognized file extension, use .png or .bmp");
 	}
 
 error:

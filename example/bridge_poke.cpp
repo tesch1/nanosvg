@@ -1,6 +1,6 @@
 // -*-  Mode: C++; c-basic-offset: 4; tab-width: 4; indent-tabs-mode: t -*-
 /*
- * Adaptor for backing nanosvg with tinyxml2.
+ * Adaptor for using tinyxml2 to parse xml for nanosvg.
  *
  * Adaped from https://github.com/poke1024/tove2d
  *
@@ -71,7 +71,6 @@ class NanoSVGVisitor : public tinyxml2::XMLVisitor
 
 			const char *id = child->Attribute("id");
 			if (id) {
-				std::cerr << "adding ref '" << id << "'\n";
 				mElementsById->insert(ElementsMap::value_type(id, child));
 			}
 			child = child->NextSiblingElement();
@@ -113,33 +112,40 @@ public:
 	}
 
 	virtual bool VisitEnter(const XMLDocument &doc) {
-		std::cerr << std::string(mDepth++, ' ') << "VisitEnter doc'" /*<< doc.Value() << */"'\n";
 		mCurrentDocument = doc.ToDocument();
+		std::cerr << std::string(mDepth++, ' ')
+				  << "DocEnter doc'"
+				  << mCurrentDocument->RootElement()->Name()
+				  << /*<< doc.Value() << */"'\n";
 
 		// always handle <defs> tags first
 		mSkipDefs = false;
+#if 1
 		const XMLElement *defs = doc.RootElement()->FirstChildElement("defs");
 		while (defs) {
 			defs->Accept(this);
 			defs = defs->NextSiblingElement("defs");
 		}
+#endif
 		mSkipDefs = true;
 
 		return true;
 	}
 
 	virtual bool VisitExit(const XMLDocument &doc) {
-		std::cerr << std::string(mDepth--, ' ') << "VisitExit'" << doc.Value() << "'\n";
+		std::cerr << std::string(mDepth--, ' ') << "DocExit'" << doc.Value() << "'\n";
 		mCurrentDocument = nullptr;
 		return true;
 	}
 
 	virtual bool VisitEnter(const XMLElement &element, const XMLAttribute *firstAttribute) {
 		std::cerr << std::string(mDepth++, ' ') << "VisitEnter2'" << element.Value() << "'\n";
-		if (mSkipDefs && strcmp(element.Name(), "defs") == 0 &&
-			element.Parent() == mCurrentDocument->RootElement()) {
+		if (mSkipDefs
+			&& strcmp(element.Name(), "defs") == 0
+			&& element.Parent() == mCurrentDocument->RootElement()) {
 			// already handled in l VisitEnter(const XMLDocument &doc)
-			return true;
+			std::cerr << "skipping\n";
+			return false;
 		}
 		const char *attr[NSVG_XML_MAX_ATTRIBS];
 		int numAttr = 0;
