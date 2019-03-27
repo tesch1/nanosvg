@@ -56,5 +56,6 @@ set (TINYXML2_DIR "${source_dir}")
 
 if (hasParent)
   add_library (tinyxml2 ${TINYXML2_DIR}/tinyxml2.cpp)
+  add_dependencies (tinyxml2 tinyxml2X)
   set (TINYXML2_DIR "${TINYXML2_DIR}" PARENT_SCOPE)
 endif (hasParent)
