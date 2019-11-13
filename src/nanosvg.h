@@ -249,7 +249,7 @@ static void nsvg__parseContent(char* s,
 							   void* ud)
 {
 	// Trim start white spaces
-	while (*s && nsvg__isspace(*s)) s++;
+	while (nsvg__isspace(*s)) s++;
 	if (!*s) return;
 
 	if (contentCb)
@@ -269,7 +269,7 @@ static void nsvg__parseElement(char* s,
 	char quote;
 
 	// Skip white space after the '<'
-	while (*s && nsvg__isspace(*s)) s++;
+	while (nsvg__isspace(*s)) s++;
 
 	// Check if the tag is end tag
 	if (*s == '/') {
@@ -294,7 +294,7 @@ static void nsvg__parseElement(char* s,
 		char* value = NULL;
 
 		// Skip white space before the attrib name
-		while (*s && nsvg__isspace(*s)) s++;
+		while (nsvg__isspace(*s)) s++;
 		if (!*s) break;
 		if (*s == '/') {
 			end = 1;
@@ -1158,12 +1158,12 @@ static const char* nsvg__parseNumber(const char* s, char* it, const int size)
 	}
 	// integer part
 	// leading zero
-	if (*s && *s == '0') {
+	if (*s == '0') {
 		if (i < last) it[i++] = *s;
 		s++;
 	}
 	else
-		while (*s && nsvg__isdigit(*s)) {
+		while (nsvg__isdigit(*s)) {
 			if (i < last) it[i++] = *s;
 			s++;
 		}
@@ -1172,7 +1172,7 @@ static const char* nsvg__parseNumber(const char* s, char* it, const int size)
 		if (i < last) it[i++] = *s;
 		s++;
 		// fraction part
-		while (*s && nsvg__isdigit(*s)) {
+		while (nsvg__isdigit(*s)) {
 			if (i < last) it[i++] = *s;
 			s++;
 		}
@@ -1185,7 +1185,7 @@ static const char* nsvg__parseNumber(const char* s, char* it, const int size)
 			if (i < last) it[i++] = *s;
 			s++;
 		}
-		while (*s && nsvg__isdigit(*s)) {
+		while (nsvg__isdigit(*s)) {
 			if (i < last) it[i++] = *s;
 			s++;
 		}
@@ -1211,7 +1211,7 @@ static const char* nsvg__getNextPathItem(const char* s, char* it)
 {
 	it[0] = '\0';
 	// Skip white spaces and commas
-	while (*s && (nsvg__isspace(*s) || *s == ',')) s++;
+	while (nsvg__isspace(*s) || *s == ',') s++;
 	if (!*s) return s;
 	if (*s == '-' || *s == '+' || *s == '.' || nsvg__isdigit(*s)) {
 		s = nsvg__parseNumber(s, it, 64);
@@ -1695,7 +1695,7 @@ static const char* nsvg__getNextDashItem(const char* s, char* it)
 	int n = 0;
 	it[0] = '\0';
 	// Skip white spaces and commas
-	while (*s && (nsvg__isspace(*s) || *s == ',')) s++;
+	while (nsvg__isspace(*s) || *s == ',') s++;
 	// Advance until whitespace, comma or end.
 	while (*s && (!nsvg__isspace(*s) && *s != ',')) {
 		if (n < 63)
@@ -1846,7 +1846,7 @@ static void nsvg__parseStyle(NSVGparser* p, const char* str)
 
 	while (*str) {
 		// Left Trim
-		while(*str && nsvg__isspace(*str)) ++str;
+		while(nsvg__isspace(*str)) ++str;
 		start = str;
 		while(*str && *str != ';') ++str;
 		end = str;
@@ -2537,15 +2537,15 @@ static void nsvg__parseSVG(NSVGparser* p, const char** attr)
 				char buf[64];
 				s = nsvg__parseNumber(s, buf, 64);
 				p->viewMinx = nsvg__atof(buf);
-				while (*s && (nsvg__isspace(*s) || *s == '%' || *s == ',')) s++;
+				while (nsvg__isspace(*s) || *s == '%' || *s == ',') s++;
 				if (!*s) return;
 				s = nsvg__parseNumber(s, buf, 64);
 				p->viewMiny = nsvg__atof(buf);
-				while (*s && (nsvg__isspace(*s) || *s == '%' || *s == ',')) s++;
+				while (nsvg__isspace(*s) || *s == '%' || *s == ',') s++;
 				if (!*s) return;
 				s = nsvg__parseNumber(s, buf, 64);
 				p->viewWidth = nsvg__atof(buf);
-				while (*s && (nsvg__isspace(*s) || *s == '%' || *s == ',')) s++;
+				while (nsvg__isspace(*s) || *s == '%' || *s == ',') s++;
 				if (!*s) return;
 				s = nsvg__parseNumber(s, buf, 64);
 				p->viewHeight = nsvg__atof(buf);
