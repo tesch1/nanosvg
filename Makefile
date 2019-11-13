@@ -1,8 +1,12 @@
 
 all:
-	[ -d build ] || cmake . -Bbuild
+	[ -d build/Makefile ] || cmake . -Bbuild
 	cmake --build build
 
+fuzz:
+	[ -d build/Makefile ] || cmake . -Bbuild -DBUILD_FUZZ=ON
+	cmake --build build --target fuzz
+
 test:
-	[ -d build ] || cmake . -Bbuild -DSVG_ENABLE_TESTING:BOOL=ON
+	[ -d build/Makefile ] || cmake . -Bbuild -DSVG_ENABLE_TESTING:BOOL=ON
 	cmake --build build

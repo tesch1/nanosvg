@@ -14,11 +14,12 @@ endif (NOT CMAKE_BUILD_TYPE AND NOT CMAKE_CONFIGURATION_TYPES)
 set(NANOSVG_HEADERS "src/nanosvg.h" "src/nanosvgrast.h")
 
 add_library(nanosvg INTERFACE)
+target_compile_features(nanosvg INTERFACE c_std_11)
 
 target_include_directories(
     nanosvg
     INTERFACE
-    "$<BUILD_INTERFACE:${CMAKE_CURRENT_LIST_DIR}>"
+    "$<BUILD_INTERFACE:${CMAKE_CURRENT_LIST_DIR}/src>"
 )
 
 # Build examples
