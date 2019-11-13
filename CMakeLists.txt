@@ -2,6 +2,15 @@ cmake_minimum_required(VERSION 3.0)
 
 project(nanosvg LANGUAGES C VERSION "0.0.0")
 
+option (BUILD_FUZZ "Build binaries with tooling for fuzzing." OFF)
+
+# Default CMAKE_BUILD_TYPE, if not Xcode or VS
+set (CMAKE_BUILD_TYPE "Release" CACHE STRING "Set cmake build type")
+set_property (CACHE CMAKE_BUILD_TYPE PROPERTY STRINGS "Debug" "Release" "RelWithDebInfo")
+if (NOT CMAKE_BUILD_TYPE AND NOT CMAKE_CONFIGURATION_TYPES)
+  set (CMAKE_BUILD_TYPE "Release")
+endif (NOT CMAKE_BUILD_TYPE AND NOT CMAKE_CONFIGURATION_TYPES)
+
 set(NANOSVG_HEADERS "src/nanosvg.h" "src/nanosvgrast.h")
 
 add_library(nanosvg INTERFACE)
