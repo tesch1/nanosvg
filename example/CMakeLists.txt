@@ -1,9 +1,20 @@
 
-include (ExternalProject)
-add_compile_options(-O2 -Wall -Werror)
-set (OpenGL_GL_PREFERENCE GLVND)
+include(ExternalProject)
+add_compile_options(-O2 -Wall)
+
+# Provide glfw3
+if (NOT NSVG_BUILD_GLFW)
+  message(STATUS "Looking for glfw3 package...")
+  find_package(GLFW3 3.3 REQUIRED)
+endif ()
+
+if (NOT "${GLFW3_FOUND}")
+  set(NSVG_BUILD_GLFW ON CACHE STRING "Didn't find GLFW3, so download it.")
+endif ()
+
+# Provide OpenGL
+set(OpenGL_GL_PREFERENCE GLVND)
 find_package(OpenGL REQUIRED)
-find_package(glfw3 3.3)
 
 #################################################################################
 #
@@ -21,7 +32,7 @@ endif ()
 # Configure the thirdparty build directory
 execute_process (
   WORKING_DIRECTORY "${CMAKE_CURRENT_BINARY_DIR}/thirdparty"
-  COMMAND ${CMAKE_COMMAND} -G${GENERATOR_STRING} -DCMAKE_CONFIGURATION_TYPES=${CMAKE_CONFIGURATION_TYPES} -DCMAKE_BUILD_TYPE=${CMAKE_BUILD_TYPE} -DCMAKE_MAKE_PROGRAM=${CMAKE_MAKE_PROGRAM} ${CMAKE_CURRENT_SOURCE_DIR}/thirdparty
+  COMMAND ${CMAKE_COMMAND} -G${GENERATOR_STRING} -DCMAKE_CONFIGURATION_TYPES=${CMAKE_CONFIGURATION_TYPES} -DCMAKE_BUILD_TYPE=${CMAKE_BUILD_TYPE} -DNSVG_BUILD_GLFW=${NSVG_BUILD_GLFW} -DCMAKE_MAKE_PROGRAM=${CMAKE_MAKE_PROGRAM} ${CMAKE_CURRENT_SOURCE_DIR}/thirdparty
   RESULT_VARIABLE THIRDPARTY_CONFIG_RESULT
   OUTPUT_VARIABLE THIRDPARTY_OUTPUT
   ERROR_VARIABLE THIRDPARTY_OUTPUT
@@ -53,13 +64,13 @@ add_executable(wireframe wireframe.c)
 add_executable(writepng writepng.c)
 
 target_link_libraries(dump m nanosvg)
-target_link_libraries(wireframe m nanosvg glfw3 OpenGL::GL)
+target_link_libraries(wireframe m nanosvg glfw OpenGL::GL)
 target_link_libraries(writepng m nanosvg)
 
 #
 # if fuzzing is enabled
 #
-if (BUILD_FUZZ)
+if (NSVG_BUILD_FUZZ)
   if (NOT WIN32)
     set (DOWNLOAD_DIR "$ENV{HOME}/Downloads")
   else (NOT WIN32)
@@ -103,4 +114,4 @@ if (BUILD_FUZZ)
     )
   add_dependencies (fuzz writepng)
 
-endif (BUILD_FUZZ)
+endif (NSVG_BUILD_FUZZ)

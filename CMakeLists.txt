@@ -2,7 +2,10 @@ cmake_minimum_required(VERSION 3.0)
 
 project(nanosvg LANGUAGES C VERSION "0.0.0")
 
-option (BUILD_FUZZ "Build binaries with tooling for fuzzing." OFF)
+option (NSVG_BUILD_EXAMPLES "Build example programs." OFF)
+option (NSVG_BUILD_TEST "Build testing suite." OFF)
+option (NSVG_BUILD_FUZZ "Build binaries with tooling for fuzzing using afl." OFF)
+option (NSVG_BUILD_GLFW "Download and build our own glfw" OFF)
 
 # Default CMAKE_BUILD_TYPE, if not Xcode or VS
 set (CMAKE_BUILD_TYPE "Release" CACHE STRING "Set cmake build type")
@@ -11,8 +14,16 @@ if (NOT CMAKE_BUILD_TYPE AND NOT CMAKE_CONFIGURATION_TYPES)
   set (CMAKE_BUILD_TYPE "Release")
 endif (NOT CMAKE_BUILD_TYPE AND NOT CMAKE_CONFIGURATION_TYPES)
 
-set(NANOSVG_HEADERS "src/nanosvg.h" "src/nanosvgrast.h")
+# Testing and Fuzzing depends on Examples
+if (NSVG_BUILD_TEST)
+  set (NSVG_BUILD_EXAMPLES ON CACHE STRING "Testing requires Examples" FORCE)
+endif ()
+if (NSVG_BUILD_FUZZ)
+  set (NSVG_BUILD_EXAMPLES ON CACHE STRING "Fuzzing requires Examples" FORCE)
+endif ()
 
+# The header "library"
+set(NANOSVG_HEADERS "src/nanosvg.h" "src/nanosvgrast.h")
 add_library(nanosvg INTERFACE)
 target_compile_features(nanosvg INTERFACE c_std_11)
 
@@ -23,7 +34,14 @@ target_include_directories(
 )
 
 # Build examples
-add_subdirectory(example)
+if (NSVG_BUILD_EXAMPLES)
+  add_subdirectory(example)
+endif ()
+
+if (NSVG_BUILD_TEST)
+  enable_testing()
+  add_subdirectory(tests)
+endif ()
 
 # Introduce variables:
 # * CMAKE_INSTALL_INCLUDEDIR

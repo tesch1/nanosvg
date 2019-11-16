@@ -14,13 +14,16 @@ else (NOT WIN32)
   set (DOWNLOAD_DIR "C:/Downloads")
 endif (NOT WIN32)
 
-# Provide glfw3
-if (NOT glfw3)
+
+if (NSVG_BUILD_GLFW)
   ExternalProject_Add (GLFWEXT
     PREFIX GLFWEXT
-    GIT_REPOSITORY "https://github.com/glfw/glfw.git"
-    GIT_TAG "3.3"
-    GIT_SHALLOW 1
+    URL https://github.com/glfw/glfw/archive/3.3.tar.gz
+    URL_HASH MD5=5be03812f5d109817e6558c3fab7bbe1
+    DOWNLOAD_DIR "${DOWNLOAD_DIR}"
+    #GIT_REPOSITORY "https://github.com/glfw/glfw.git"
+    #GIT_TAG "3.3"
+    #GIT_SHALLOW 1
     UPDATE_COMMAND ""
     PATCH_COMMAND ""
     CONFIGURE_COMMAND ""
@@ -37,7 +40,6 @@ if (NOT glfw3)
     set (GLFW_CLIENT_LIBRARY opengl CACHE STRING "client to use for glfw" FORCE) # glesv1, glesv2
     set (GLFW_INSTALL OFF CACHE BOOL "just want glfw library" FORCE)
     # set (GLFW_USE_OPTIMUS_HPG ON "just want glfw library")
-    add_subdirectory (${source_dir} ${binary_dir})
-    add_library(glfw3 ALIAS glfw)
-  endif (hasParent)
-endif (NOT glfw3)
+    add_subdirectory (${source_dir} ${binary_dir} EXCLUDE_FROM_ALL)
+  endif ()
+endif ()

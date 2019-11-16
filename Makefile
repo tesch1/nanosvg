@@ -1,12 +1,14 @@
 
-all:
-	[ -d build/Makefile ] || cmake . -Bbuild
-	cmake --build build
-
-fuzz:
-	[ -d build/Makefile ] || cmake . -Bbuild -DBUILD_FUZZ=ON
-	cmake --build build --target fuzz
+all: test
 
 test:
-	[ -d build/Makefile ] || cmake . -Bbuild -DSVG_ENABLE_TESTING:BOOL=ON
-	cmake --build build
+	[ -d build/Makefile ] || CXX=clang++ CC=clang cmake . -Bbuild -DNSVG_BUILD_TEST:BOOL=ON
+	cmake --build build --target all
+	cmake --build build --target test
+
+fuzz:
+	CXX=clang++ CC=clang cmake . -Bbuild-fuzz -DBUILD_FUZZ=ON
+	cd build-fuzz && $(MAKE) fuzz
+
+distclean:
+	rm -rf build
