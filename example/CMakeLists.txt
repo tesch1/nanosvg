@@ -108,7 +108,7 @@ if (NSVG_BUILD_FUZZ)
     COMMAND mkdir -p fuzz-data
     COMMAND cp ${CMAKE_CURRENT_SOURCE_DIR}/fuzz.dict ./
     COMMAND cp ${CMAKE_CURRENT_SOURCE_DIR}/svgs/nano.svg fuzz-data/
-    COMMAND cp ${CMAKE_CURRENT_SOURCE_DIR}/svgs/23.svg fuzz-data/
+    #COMMAND cp ${CMAKE_CURRENT_SOURCE_DIR}/svgs/23.svg fuzz-data/
     COMMAND cp ${CMAKE_CURRENT_SOURCE_DIR}/svgs/bug167.svg fuzz-data/
     COMMAND ${AFL_DIR}/afl-fuzz -i fuzz-data -o fuzz-out -x fuzz.dict $<TARGET_FILE:writepng> @@ ''
     )

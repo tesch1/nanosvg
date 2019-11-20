@@ -7,7 +7,7 @@ test:
 	cmake --build build --target test
 
 fuzz:
-	CXX=clang++ CC=clang cmake . -Bbuild-fuzz -DBUILD_FUZZ=ON
+	CXX=clang++ CC=clang cmake . -Bbuild-fuzz -DNSVG_BUILD_FUZZ=ON -DCMAKE_BUILD_TYPE=Release
 	cd build-fuzz && $(MAKE) fuzz
 
 distclean:
